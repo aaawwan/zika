@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <meta name="theme-color" content="#f5f5f5">
+  <title>字卡传讯 · 轻量版</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{
+      --bg:#f5f5f5;--card-bg:#fff;--text:#1a1a1a;--text-sub:#888;
+      --bubble-ta:#f0f0f0;--bubble-me:#1a1a1a;--text-me:#fff;
+      --border:#e8e8e8;--danger:#e55;--danger-bg:#fff0f0
+    }
+    html,body{height:100%}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+      background:var(--bg);color:var(--text);
+      height:100dvh;display:flex;flex-direction:column;
+      max-width:480px;margin:0 auto;
+      -webkit-tap-highlight-color:transparent;overflow:hidden
+    }
+    .header{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 16px;background:var(--card-bg);
+      border-bottom:1px solid var(--border);flex-shrink:0
+    }
+    .header-left{display:flex;align-items:center;gap:10px;min-width:0;cursor:pointer}
+    .avatar{
+      width:34px;height:34px;border-radius:50%;background:var(--bg);flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      font-size:12px;color:var(--text-sub);overflow:hidden
+    }
+    .avatar img{width:100%;height:100%;object-fit:cover}
+    .header .name{font-size:16px;font-weight:600}
+    .header .status{font-size:11px;color:var(--text-sub)}
+    .header-actions{display:flex;gap:8px}
+    .icon-btn{
+      width:32px;height:32px;border-radius:50%;border:none;
+      background:var(--bg);font-size:14px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center
+    }
+    .icon-btn:active{opacity:.5}
+
+    .chat-area{
+      flex:1;overflow-y:auto;padding:16px;
+      display:flex;flex-direction:column;gap:10px
+    }
+    .chat-area::-webkit-scrollbar{width:0}
+    .msg-row{display:flex;align-items:flex-end;gap:8px;animation:fadeIn .25s}
+    .msg-row.ta{justify-content:flex-start}
+    .msg-row.me{justify-content:flex-end;flex-direction:row-reverse}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+    .msg-avatar{
+      width:30px;height:30px;border-radius:50%;background:var(--bg);flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      font-size:11px;color:var(--text-sub);overflow:hidden
+    }
+    .msg-avatar img{width:100%;height:100%;object-fit:cover}
+
+    .bubble{
+      max-width:72%;padding:10px 14px;border-radius:18px;
+      font-size:14px;line-height:1.55;word-break:break-word;
+      cursor:pointer;position:relative
+    }
+    .msg-row.ta .bubble{background:var(--bubble-ta);border-bottom-left-radius:4px}
+    .msg-row.me .bubble{background:var(--bubble-me);color:var(--text-me);border-bottom-right-radius:4px}
+
+    .quote{
+      background:rgba(0,0,0,.06);border-left:3px solid rgba(0,0,0,.2);
+      padding:5px 8px;border-radius:6px;font-size:11px;
+      margin-bottom:6px;opacity:.85;line-height:1.4
+    }
+    .msg-row.me .quote{background:rgba(255,255,255,.15);border-left-color:rgba(255,255,255,.5)}
+    .quote .quote-name{font-weight:600;opacity:.8}
+
+    .bubble.emoji-bubble{background:transparent!important;padding:0!important}
+    .bubble.emoji-bubble img{max-width:120px;max-height:120px;border-radius:12px;display:block}
+    .bubble.emoji-text{font-size:32px;padding:4px 8px;background:transparent!important}
+
+    .tag{
+      display:inline-block;font-size:9px;padding:1px 5px;
+      border-radius:6px;margin-left:4px;opacity:.6
+    }
+    .msg-row.ta .tag{background:rgba(0,0,0,.06)}
+    .msg-row.me .tag{background:rgba(255,255,255,.2)}
+
+    .reply-preview{
+      display:none;align-items:center;gap:8px;
+      padding:8px 16px;background:#eef0f2;
+      font-size:12px;color:var(--text-sub);
+      border-top:1px solid var(--border);flex-shrink:0
+    }
+    .reply-preview.open{display:flex}
+    .reply-preview .text{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .reply-preview .close{border:none;background:none;color:var(--text-sub);font-size:16px;cursor:pointer;padding:0 4px}
+
+    .input-bar{
+      display:flex;align-items:center;gap:8px;
+      padding:10px 16px 14px;background:var(--card-bg);
+      border-top:1px solid var(--border);flex-shrink:0;
+      padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))
+    }
+    .input-bar input{
+      flex:1;min-width:0;border:none;outline:none;
+      background:var(--bg);padding:10px 16px;border-radius:22px;font-size:14px
+    }
+    .emoji-toggle{
+      width:36px;height:36px;border-radius:50%;border:none;
+      background:var(--bg);font-size:18px;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;flex-shrink:0
+    }
+    .send-btn{
+      width:38px;height:38px;border-radius:50%;border:none;
+      background:var(--bubble-me);color:#fff;font-size:16px;
+      cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0
+    }
+    .send-btn:active{transform:scale(.9)}
+
+    .emoji-panel{
+      position:fixed;left:0;right:0;bottom:0;
+      max-width:480px;margin:0 auto;
+      background:var(--card-bg);border-top:1px solid var(--border);
+      border-radius:20px 20px 0 0;z-index:90;
+      transform:translateY(100%);transition:transform .25s;
+      padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));
+      max-height:55vh;overflow-y:auto
+    }
+    .emoji-panel.open{transform:translateY(0)}
+    .emoji-panel-tabs{
+      display:flex;gap:6px;margin-bottom:12px;
+      background:var(--bg);padding:4px;border-radius:12px
+    }
+    .emoji-panel-tab{
+      flex:1;padding:7px;border-radius:8px;border:none;
+      background:transparent;color:var(--text-sub);
+      font-size:13px;cursor:pointer;font-weight:500
+    }
+    .emoji-panel-tab.active{background:var(--card-bg);color:var(--text)}
+    .emoji-page{display:none}
+    .emoji-page.active{display:block}
+    .emoji-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+    .emoji-grid.img-grid{grid-template-columns:repeat(4,1fr)}
+    .emoji-item{
+      aspect-ratio:1;border-radius:12px;overflow:hidden;
+      background:var(--bg);cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      font-size:26px;border:none;padding:0
+    }
+    .emoji-item img{width:100%;height:100%;object-fit:cover}
+    .emoji-item:active{opacity:.6}
+    .emoji-empty{text-align:center;color:var(--text-sub);font-size:12px;padding:24px}
+
+    .panel{
+      position:fixed;inset:0;background:rgba(0,0,0,.3);
+      z-index:100;display:none;align-items:flex-end;justify-content:center
+    }
+    .panel.open{display:flex}
+    .panel-inner{
+      width:100%;max-width:480px;background:var(--card-bg);
+      border-radius:20px 20px 0 0;padding:20px;
+      max-height:88vh;overflow-y:auto;
+      padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))
+    }
+    .panel-title{
+      font-size:16px;font-weight:600;margin-bottom:14px;
+      display:flex;justify-content:space-between;align-items:center
+    }
+    .panel-close{border:none;background:none;font-size:20px;cursor:pointer;color:var(--text-sub);padding:4px}
+    .settings-tabs{
+      display:flex;gap:6px;margin-bottom:16px;
+      background:var(--bg);padding:4px;border-radius:12px
+    }
+    .settings-tab{
+      flex:1;padding:8px;border-radius:8px;border:none;
+      background:transparent;color:var(--text-sub);
+      font-size:13px;cursor:pointer;font-weight:500
+    }
+    .settings-tab.active{background:var(--card-bg);color:var(--text)}
+    .settings-page{display:none}
+    .settings-page.active{display:block}
+
+    .group-tabs{
+      display:flex;gap:6px;overflow-x:auto;
+      padding-bottom:4px;margin-bottom:14px;scrollbar-width:none
+    }
+    .group-tabs::-webkit-scrollbar{display:none}
+    .group-tab-wrap{position:relative;flex-shrink:0}
+    .group-tab{
+      padding:6px 14px;border-radius:16px;border:none;
+      background:var(--bg);color:var(--text-sub);
+      font-size:13px;cursor:pointer;display:flex;align-items:center;gap:4px
+    }
+    .group-tab.active{background:var(--bubble-me);color:#fff}
+    .group-tab .count{font-size:10px;opacity:.6}
+    .group-tab-wrap .group-del{
+      position:absolute;top:-4px;right:-4px;
+      width:16px;height:16px;border-radius:50%;
+      background:var(--danger);color:#fff;border:none;
+      font-size:10px;line-height:1;cursor:pointer;
+      display:none;align-items:center;justify-content:center
+    }
+    .group-tab-wrap:hover .group-del{display:flex}
+    .add-group-btn{
+      flex-shrink:0;padding:6px 14px;border-radius:16px;
+      border:1px dashed var(--border);background:transparent;
+      color:var(--text-sub);font-size:13px;cursor:pointer
+    }
+
+    .card-list{
+      display:flex;flex-direction:column;gap:8px;
+      max-height:36vh;overflow-y:auto;padding:4px 0;margin-bottom:14px
+    }
+    .card-list::-webkit-scrollbar{width:0}
+    .card-item{
+      display:flex;align-items:center;gap:10px;
+      background:var(--bg);border-radius:12px;padding:10px 14px
+    }
+    .card-item .card-text{
+      flex:1;font-size:14px;outline:none;
+      border-bottom:1px dashed transparent;word-break:break-word
+    }
+    .card-item .card-text:focus{border-bottom-color:#999}
+    .card-item .card-tag{
+      font-size:10px;color:var(--text-sub);background:rgba(0,0,0,.05);
+      padding:2px 8px;border-radius:8px;flex-shrink:0;outline:none
+    }
+    .card-item .card-del{border:none;background:none;color:#ccc;font-size:16px;cursor:pointer;flex-shrink:0}
+
+    .card-add{display:flex;gap:8px;margin-bottom:14px}
+    .card-add input{
+      flex:1;border:1px solid var(--border);border-radius:12px;
+      padding:10px 14px;font-size:14px;outline:none;background:var(--bg)
+    }
+    .card-add button{
+      border:none;background:var(--bubble-me);color:#fff;
+      padding:0 18px;border-radius:12px;font-size:14px;cursor:pointer;flex-shrink:0
+    }
+    .panel-btns{display:flex;gap:10px;margin-top:10px}
+    .btn{flex:1;padding:10px;border-radius:12px;border:none;font-size:14px;cursor:pointer;font-weight:500}
+    .btn-primary{background:var(--bubble-me);color:#fff}
+    .btn-secondary{background:var(--bg)}
+    .btn-danger{background:var(--danger-bg);color:var(--danger)}
+
+    .advanced{margin-top:16px;border-top:1px solid var(--border);padding-top:14px}
+    .advanced summary{font-size:13px;color:var(--text-sub);cursor:pointer;list-style:none}
+    .advanced textarea{
+      width:100%;height:120px;margin-top:10px;
+      border:1px solid var(--border);border-radius:12px;
+      padding:12px;font-size:12px;font-family:monospace;
+      resize:vertical;outline:none;background:var(--bg);line-height:1.5
+    }
+
+    .avatar-setter{display:flex;gap:16px;margin-bottom:20px}
+    .avatar-setter .side{flex:1;text-align:center}
+    .avatar-setter .preview{
+      width:70px;height:70px;border-radius:50%;background:var(--bg);
+      margin:0 auto 8px;display:flex;align-items:center;
+      justify-content:center;font-size:24px;color:var(--text-sub);overflow:hidden
+    }
+    .avatar-setter .preview img{width:100%;height:100%;object-fit:cover}
+    .avatar-setter .label{font-size:12px;color:var(--text-sub);margin-bottom:8px}
+    .upload-btn{
+      display:inline-block;padding:6px 14px;
+      background:var(--bg);border-radius:10px;
+      font-size:12px;cursor:pointer;border:1px solid var(--border)
+    }
+    .upload-btn input{display:none}
+
+    .emoji-manage-grid{
+      display:grid;grid-template-columns:repeat(4,1fr);
+      gap:10px;margin-bottom:14px
+    }
+    .emoji-manage-item{
+      aspect-ratio:1;border-radius:12px;overflow:hidden;
+      background:var(--bg);position:relative
+    }
+    .emoji-manage-item img{width:100%;height:100%;object-fit:cover}
+    .emoji-manage-item .del{
+      position:absolute;top:4px;right:4px;
+      width:20px;height:20px;border-radius:50%;
+      background:rgba(0,0,0,.5);color:#fff;border:none;
+      font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center
+    }
+    .empty-tip{
+      text-align:center;color:var(--text-sub);font-size:12px;
+      padding:40px 20px;line-height:1.8;margin:auto 0
+    }
+    .empty-cards{text-align:center;color:var(--text-sub);font-size:12px;padding:20px}
+    .typing{display:flex;gap:4px;padding:12px 16px}
+    .typing span{width:6px;height:6px;border-radius:50%;background:#ccc;animation:bounce 1.2s infinite}
+    .typing span:nth-child(2){animation-delay:.15s}
+    .typing span:nth-child(3){animation-delay:.3s}
+    @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
+    .section-label{font-size:12px;color:var(--text-sub);margin:16px 0 8px;font-weight:500}
+  </style>
+</head>
+<body>
+<header class="header">
+  <div class="header-left" id="headerLeft">
+    <div class="avatar" id="taAvatar">TA</div>
+    <div>
+      <div class="name" id="contactName">TA</div>
+      <div class="status">在线</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" id="btnPanel">⚙</button>
+    <button class="icon-btn" id="btnClear">✕</button>
+  </div>
+</header>
+
+<main class="chat-area" id="chatArea">
+  <div class="empty-tip" id="emptyTip">还没有消息<br>在下方输入内容开始对话</div>
+</main>
+
+<div class="reply-preview" id="replyPreview">
+  <span class="text" id="replyPreviewText"></span>
+  <button class="close" id="btnCancelReply">✕</button>
+</div>
+
+<footer class="input-bar">
+  <button class="emoji-toggle" id="btnEmoji">😊</button>
+  <input type="text" id="msgInput" placeholder="输入消息..." maxlength="200" autocomplete="off">
+  <button class="send-btn" id="sendBtn">↑</button>
+</footer>
+
+<div class="emoji-panel" id="emojiPanel">
+  <div class="emoji-panel-tabs">
+    <button class="emoji-panel-tab active" data-epage="emoji">Emoji</button>
+    <button class="emoji-panel-tab" data-epage="sticker">图片表情</button>
+  </div>
+  <div class="emoji-page active" id="epage-emoji"><div class="emoji-grid" id="emojiGrid"></div></div>
+  <div class="emoji-page" id="epage-sticker">
+    <div class="emoji-grid img-grid" id="stickerGrid"></div>
+    <div class="emoji-empty" id="stickerEmpty" style="display:none">还没有图片表情，去设置 → 表情包里添加</div>
+  </div>
+</div>
+
+<div class="panel" id="panel">
+  <div class="panel-inner">
+    <div class="panel-title"><span>设置</span><button class="panel-close" id="btnPanelClose">✕</button></div>
+    <div class="settings-tabs">
+      <button class="settings-tab active" data-tab="cards">字卡库</button>
+      <button class="settings-tab" data-tab="emoji">表情包</button>
+      <button class="settings-tab" data-tab="avatar">头像 / 名字</button>
+    </div>
+
+    <div class="settings-page active" id="page-cards">
+      <div class="group-tabs" id="groupTabs"></div>
+      <div class="card-list" id="cardList"></div>
+      <div class="card-add">
+        <input type="text" id="newCardInput" placeholder="输入新字卡..." maxlength="60">
+        <button id="btnAddCard">添加</button>
+      </div>
+      <details class="advanced">
+        <summary>高级选项（JSON 导入 / 导出）</summary>
+        <textarea id="cardInput" spellcheck="false"></textarea>
+        <div class="panel-btns">
+          <button class="btn btn-secondary" id="btnExport">导出</button>
+          <button class="btn btn-primary" id="btnImport">导入</button>
+        </div>
+      </details>
+      <div class="panel-btns" style="margin-top:16px;">
+        <button class="btn btn-secondary" id="btnDefault">恢复默认</button>
+        <button class="btn btn-danger" id="btnWipe">清除全部数据</button>
+      </div>
+    </div>
+
+    <div class="settings-page" id="page-emoji">
+      <div class="section-label">已添加的图片表情</div>
+      <div class="emoji-manage-grid" id="emojiManageGrid"></div>
+      <p class="empty-cards" id="emojiManageEmpty" style="display:none">还没有图片表情</p>
+      <label class="upload-btn" style="display:block;text-align:center;padding:12px;margin-top:12px;">
+        + 添加图片表情
+        <input type="file" id="emojiUpload" accept="image/*" multiple>
+      </label>
+      <p style="font-size:11px;color:var(--text-sub);margin-top:10px;line-height:1.6;">支持 jpg / png / gif / webp。图片保存在浏览器本地，不会上传服务器。</p>
+    </div>
+
+    <div class="settings-page" id="page-avatar">
+      <div class="avatar-setter">
+        <div class="side">
+          <div class="label">TA 的头像</div>
+          <div class="preview" id="previewTa">TA</div>
+          <label class="upload-btn">更换<input type="file" id="uploadTaAvatar" accept="image/*"></label>
+        </div>
+        <div class="side">
+          <div class="label">我的头像</div>
+          <div class="preview" id="previewMe">我</div>
+          <label class="upload-btn">更换<input type="file" id="uploadMeAvatar" accept="image/*"></label>
+        </div>
+      </div>
+      <div class="section-label">TA 的名字</div>
+      <div class="card-add">
+        <input type="text" id="taNameInput" placeholder="给 TA 起个名字" maxlength="20">
+        <button id="btnSaveName">保存</button>
+      </div>
+      <div class="panel-btns" style="margin-top:16px;">
+        <button class="btn btn-secondary" id="btnResetAvatar">恢复默认头像</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    const K={MSG:'zikao_messages',CARDS:'zikao_cards',NAME:'zikao_name',EMOJIS:'zikao_emojis',TA_AV:'zikao_ta_av',ME_AV:'zikao_me_av'};
+    const EMOJI_LIST=['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','😵','🤯','🤠','🥳','😎','🤓','🧐','😕','😟','🙁','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','💩','🤡','👻','👽','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾','❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','👍','👎','👌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','✋','🤚','🖐','🖖','👋','🤝','🙏','💪','🦾','✍️','💅','👏','🙌','👐','🤲','🤜','🤛','✊','👊','🎉','🎊','🎈','🎁','🎂','🍰','🌈','⭐','🌟','✨','⚡','🔥','💧','🌸','🌺','🌻','🌹','🍀','🍎','🍊','🍋','🍌','🍉','🍇','🍓','🍒','🍑','🥭','🍍','🥥','🍅','🥑','🥕','🌽','🌶','🥒','🥬','🥦','🍄','🍞','🥐','🥖','🥨','🧀','🥚','🍳','🥞','🧇','🥓','🍔','🍟','🍕','🌭','🥪','🌮','🌯','🥙','🧆','🍜','🍝','🍣','🍤','🍦','🍩','🍪','🎂','🍫','🍬','🍭','🍮','☕','🍵','🥤','🧋','🍺','🍻','🥂','🍷','🍸'];
+    const DEFAULT_CARDS=[
+      {text:"嗯嗯",tag:"回复"},{text:"可以",tag:"回复"},{text:"是的",tag:"回复"},{text:"很好",tag:"回复"},{text:"好的",tag:"回复"},{text:"收到",tag:"回复"},{text:"没问题",tag:"回复"},{text:"当然可以",tag:"回复"},{text:"我同意",tag:"回复"},{text:"赞同",tag:"回复"},{text:"行吧",tag:"回复"},{text:"好呀",tag:"回复"},{text:"对呀",tag:"回复"},{text:"不是吧",tag:"回复"},{text:"不太行",tag:"回复"},{text:"等我下",tag:"回复"},{text:"稍等",tag:"回复"},{text:"好的呢",tag:"回复"},{text:"嗯哼",tag:"回复"},{text:"收到啦",tag:"回复"},{text:"明白",tag:"回复"},{text:"了解",tag:"回复"},{text:"真棒",tag:"回复"},{text:"厉害",tag:"回复"},{text:"太好啦",tag:"回复"},
+      {text:"刚吃完饭",tag:"日常"},{text:"今天天气真好",tag:"日常"},{text:"在听你说呢",tag:"日常"},{text:"别熬夜啦",tag:"日常"},{text:"刚睡醒",tag:"日常"},{text:"在忙工作",tag:"日常"},{text:"刚到家",tag:"日常"},{text:"准备去洗澡",tag:"日常"},{text:"今天吃什么",tag:"日常"},{text:"出门啦",tag:"日常"},{text:"刚刚看到一只猫",tag:"日常"},{text:"在晒太阳",tag:"日常"},{text:"有点想喝奶茶",tag:"日常"},{text:"手机快没电了",tag:"日常"},{text:"在听歌",tag:"日常"},
+      {text:"开心",tag:"情绪"},{text:"有点累",tag:"情绪"},{text:"有点委屈",tag:"情绪"},{text:"好困",tag:"情绪"},{text:"心情不错",tag:"情绪"},{text:"有点烦躁",tag:"情绪"},{text:"好无聊",tag:"情绪"},{text:"有点想哭",tag:"情绪"},{text:"压力有点大",tag:"情绪"},{text:"突然有点emo",tag:"情绪"},
+      {text:"今天也想你了",tag:"心意"},{text:"在想你呢",tag:"心意"},{text:"抱抱",tag:"心意"},{text:"想见你",tag:"心意"},{text:"喜欢你",tag:"心意"},{text:"有你在真好",tag:"心意"},{text:"偷偷看你头像",tag:"心意"},{text:"想牵着你的手",tag:"心意"},{text:"你最重要了",tag:"心意"},{text:"一直在想你",tag:"心意"},
+      {text:"在忙，稍等",tag:"意图"},{text:"好呀，听你的",tag:"意图"},{text:"等下找你",tag:"意图"},{text:"嗯…让我想想",tag:"意图"},{text:"等我一下下",tag:"意图"},{text:"马上回来",tag:"意图"},{text:"稍后回复你",tag:"意图"},{text:"我看看先",tag:"意图"},{text:"一会儿给你打",tag:"意图"},
+      {text:"晚安，做个好梦",tag:"晚安"},{text:"早点睡，别熬夜",tag:"晚安"},{text:"梦里见",tag:"晚安"},{text:"盖好被子",tag:"晚安"},{text:"我先睡啦",tag:"晚安"},{text:"晚安好梦",tag:"晚安"},{text:"明天见",tag:"晚安"},{text:"好梦",tag:"晚安"},
+      {text:"哈哈哈",tag:"随机"},{text:"摸摸头",tag:"随机"},{text:"？？？",tag:"随机"},{text:"真的吗",tag:"随机"},{text:"我也是",tag:"随机"},{text:"那挺好的",tag:"随机"},{text:"嗯…",tag:"随机"},{text:"诶嘿",tag:"随机"}
+    ];
+    const CONFIG={replyDelayMin:600,replyDelayMax:1800,thinkingTime:300};
+
+    function loadJSON(k,fb){try{const r=localStorage.getItem(k);return r?JSON.parse(r)??fb:fb}catch{return fb}}
+    function saveJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){console.warn(e)}}
+    function loadStr(k,fb){try{return localStorage.getItem(k)||fb}catch{return fb}}
+
+    let messages=loadJSON(K.MSG,[]);
+    let cards=loadJSON(K.CARDS,DEFAULT_CARDS);
+    let emojis=loadJSON(K.EMOJIS,[]);
+    let contactName=loadStr(K.NAME,'TA');
+    let taAvatar=loadStr(K.TA_AV,'');
+    let meAvatar=loadStr(K.ME_AV,'');
+    let currentGroup='全部';
+    let replyTo=null;
+
+    const $=id=>document.getElementById(id);
+    const chatArea=$('chatArea'),emptyTip=$('emptyTip'),msgInput=$('msgInput');
+    const contactNameEl=$('contactName'),taAvatarEl=$('taAvatar'),panelEl=$('panel');
+    const cardList=$('cardList'),groupTabs=$('groupTabs'),emojiGrid=$('emojiGrid');
+    const stickerGrid=$('stickerGrid'),stickerEmpty=$('stickerEmpty');
+    const emojiManageGrid=$('emojiManageGrid'),emojiManageEmpty=$('emojiManageEmpty');
+    const replyPreview=$('replyPreview'),replyPreviewText=$('replyPreviewText');
+
+    function renderAvatars(){
+      taAvatarEl.innerHTML=taAvatar?`<img src="${taAvatar}">`:'TA';
+      $('previewTa').innerHTML=taAvatar?`<img src="${taAvatar}">`:'TA';
+      $('previewMe').innerHTML=meAvatar?`<img src="${meAvatar}">`:'我';
+    }
+
+    function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+    function scrollBottom(){requestAnimationFrame(()=>{chatArea.scrollTop=chatArea.scrollHeight})}
+
+    function createBubble(msg,index){
+      const row=document.createElement('div');
+      row.className=`msg-row ${msg.side}`;
+      const av=document.createElement('div');
+      av.className='msg-avatar';
+      const src=msg.side==='ta'?taAvatar:meAvatar;
+      if(src)av.innerHTML=`<img src="${src}">`;
+      else av.textContent=msg.side==='ta'?'TA':'我';
+      const bubble=document.createElement('div');
+      bubble.className='bubble';
+      if(msg.reply){
+        const q=document.createElement('div');
+        q.className='quote';
+        q.innerHTML=`<span class="quote-name">${escapeHtml(msg.reply.name)}：</span>${escapeHtml(msg.reply.text)}`;
+        bubble.appendChild(q);
+      }
+      if(msg.type==='sticker'&&msg.src){
+        bubble.classList.add('emoji-bubble');
+        const img=document.createElement('img');
+        img.src=msg.src;
+        bubble.appendChild(img);
+      }else if(msg.type==='emoji'){
+        bubble.classList.add('emoji-text');
+        bubble.appendChild(document.createTextNode(msg.text));
+      }else{
+        bubble.appendChild(document.createTextNode(msg.text));
+        if(msg.tag){
+          const t=document.createElement('span');
+          t.className='tag';
+          t.textContent=msg.tag;
+          bubble.appendChild(t);
+        }
+      }
+      bubble.addEventListener('click',()=>startReply(msg));
+      row.appendChild(av);
+      row.appendChild(bubble);
+      return row;
+    }
+
+    function renderAll(){
+      contactNameEl.textContent=contactName;
+      chatArea.innerHTML='';
+      if(messages.length===0){chatArea.appendChild(emptyTip);return}
+      const frag=document.createDocumentFragment();
+      messages.forEach((msg,i)=>frag.appendChild(createBubble(msg,i)));
+      chatArea.appendChild(frag);
+      scrollBottom();
+    }
+
+    function appendBubble(msg){
+      const tip=chatArea.querySelector('.empty-tip');
+      if(tip)tip.remove();
+      chatArea.appendChild(createBubble(msg,messages.length-1));
+      scrollBottom();
+    }
+
+    function startReply(msg){
+      const name=msg.side==='ta'?contactName:'我';
+      let preview=msg.text||'';
+      if(msg.type==='sticker')preview='[图片表情]';
+      replyTo={name,text:preview.slice(0,40)};
+      replyPreviewText.textContent=`${name}：${replyTo.text}`;
+      replyPreview.classList.add('open');
+      msgInput.focus();
+    }
+
+    function cancelReply(){replyTo=null;replyPreview.classList.remove('open')}
+    $('btnCancelReply').addEventListener('click',cancelReply);
+
+    function sendText(){
+      const text=msgInput.value.trim();
+      if(!text)return;
+      const msg={side:'me',text,time:Date.now()};
+      if(replyTo)msg.reply=replyTo;
+      messages.push(msg);
+      appendBubble(msg);
+      msgInput.value='';
+      cancelReply();
+      saveJSON(K.MSG,messages);
+      triggerReply();
+    }
+
+    function sendSticker(src){
+      const msg={side:'me',type:'sticker',src,text:'[图片表情]',time:Date.now()};
+      if(replyTo)msg.reply=replyTo;
+      messages.push(msg);
+      appendBubble(msg);
+      cancelReply();
+      saveJSON(K.MSG,messages);
+      triggerReply();
+    }
+
+    function sendEmoji(ch){
+      const msg={side:'me',type:'emoji',text:ch,time:Date.now()};
+      if(replyTo)msg.reply=replyTo;
+      messages.push(msg);
+      appendBubble(msg);
+      cancelReply();
+      saveJSON(K.MSG,messages);
+      triggerReply();
+    }
+
+    function triggerReply(){
+      if(!cards.length)return;
+      setTimeout(()=>{
+        showTyping();
+        const delay=CONFIG.replyDelayMin+Math.random()*(CONFIG.replyDelayMax-CONFIG.replyDelayMin);
+        setTimeout(()=>{
+          hideTyping();
+          const card=cards[Math.floor(Math.random()*cards.length)];
+          const msg={side:'ta',text:card.text,tag:card.tag||'',time:Date.now()};
+          messages.push(msg);
+          appendBubble(msg);
+          saveJSON(K.MSG,messages);
+        },delay);
+      },CONFIG.thinkingTime);
+    }
+
+    function showTyping(){
+      if($('typingRow'))return;
+      const row=document.createElement('div');
+      row.className='msg-row ta';row.id='typingRow';
+      row.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';
+      chatArea.appendChild(row);
+      scrollBottom();
+    }
+    function hideTyping(){const el=$('typingRow');if(el)el.remove()}
+
+    function getGroups(){
+      const set=new Set();
+      cards.forEach(c=>{if(c.tag)set.add(c.tag)});
+      return ['全部',...Array.from(set)];
+    }
+
+    function renderGroupTabs(){
+      groupTabs.innerHTML='';
+      const groups=getGroups();
+      if(!groups.includes(currentGroup))currentGroup='全部';
+      groups.forEach(g=>{
+        const count=g==='全部'?cards.length:cards.filter(c=>c.tag===g).length;
+        const wrap=document.createElement('div');
+        wrap.className='group-tab-wrap';
+        const btn=document.createElement('button');
+        btn.className='group-tab'+(g===currentGroup?' active':'');
+        btn.innerHTML=`${escapeHtml(g)}<span class="count">${count}</span>`;
+        btn.addEventListener('click',()=>{currentGroup=g;renderGroupTabs();renderCards()});
+        wrap.appendChild(btn);
+        if(g!=='全部'){
+          const del=document.createElement('button');
+          del.className='group-del';del.textContent='✕';
+          del.title='删除分组（字卡会保留到"全部"）';
+          del.addEventListener('click',e=>{
+            e.stopPropagation();
+            if(!confirm(`删除分组"${g}"？组内字卡会保留，标签会被清空。`))return;
+            cards.forEach(c=>{if(c.tag===g)c.tag=''});
+            saveJSON(K.CARDS,cards);
+            if(currentGroup===g)currentGroup='全部';
+            renderGroupTabs();renderCards();
+          });
+          wrap.appendChild(del);
+        }
+        groupTabs.appendChild(wrap);
+      });
+      const addBtn=document.createElement('button');
+      addBtn.className='add-group-btn';addBtn.textContent='+ 新分组';
+      addBtn.addEventListener('click',()=>{
+        const name=prompt('新分组名字：');
+        if(!name||!name.trim())return;
+        const n=name.trim();
+        cards.push({text:'（新分组占位，可改）',tag:n});
+        saveJSON(K.CARDS,cards);
+        currentGroup=n;
+        renderGroupTabs();renderCards();
+      });
+      groupTabs.appendChild(addBtn);
+    }
+
+    function getCurrentCards(){
+      if(currentGroup==='全部')return cards.map((c,i)=>({...c,_i:i}));
+      return cards.map((c,i)=>({...c,_i:i})).filter(c=>c.tag===currentGroup);
+    }
+
+    function renderCards(){
+      cardList.innerHTML='';
+      const list=getCurrentCards();
+      if(list.length===0){
+        const e=document.createElement('div');
+        e.className='empty-cards';e.textContent='这个分组还没有字卡';
+        cardList.appendChild(e);
+        return;
+      }
+      list.forEach(c=>{
+        const i=c._i;
+        const item=document.createElement('div');
+        item.className='card-item';
+        const t=document.createElement('div');
+        t.className='card-text';t.contentEditable='true';
+        t.textContent=c.text;
+        t.addEventListener('blur',()=>{
+          const v=t.textContent.trim();
+          if(v&&v!==c.text){cards[i].text=v;saveJSON(K.CARDS,cards)}
+          else if(!v)t.textContent=c.text;
+        });
+        t.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();t.blur()}});
+        const tag=document.createElement('div');
+        tag.className='card-tag';tag.contentEditable='true';
+        tag.textContent=c.tag||'';
+        tag.addEventListener('blur',()=>{
+          const v=tag.textContent.trim();
+          if(v!==c.tag){cards[i].tag=v;saveJSON(K.CARDS,cards);renderGroupTabs();renderCards()}
+        });
+        tag.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();tag.blur()}});
+        const del=document.createElement('button');
+        del.className='card-del';del.textContent='✕';
+        del.addEventListener('click',()=>{cards.splice(i,1);saveJSON(K.CARDS,cards);renderGroupTabs();renderCards()});
+        item.appendChild(t);item.appendChild(tag);item.appendChild(del);
+        cardList.appendChild(item);
+      });
+    }
+
+    function renderEmojiPanel(){
+      emojiGrid.innerHTML='';
+      EMOJI_LIST.forEach(ch=>{
+        const b=document.createElement('button');
+        b.className='emoji-item';b.textContent=ch;
+        b.addEventListener('click',()=>{sendEmoji(ch);$('emojiPanel').classList.remove('open')});
+        emojiGrid.appendChild(b);
+      });
+      stickerGrid.innerHTML='';
+      if(emojis.length===0){stickerEmpty.style.display='block'}
+      else{
+        stickerEmpty.style.display='none';
+        emojis.forEach(src=>{
+          const b=document.createElement('button');
+          b.className='emoji-item';b.innerHTML=`<img src="${src}">`;
+          b.addEventListener('click',()=>{sendSticker(src);$('emojiPanel').classList.remove('open')});
+          stickerGrid.appendChild(b);
+        });
+      }
+    }
+
+    function renderEmojiManage(){
+      emojiManageGrid.innerHTML='';
+      if(emojis.length===0){emojiManageEmpty.style.display='block';return}
+      emojiManageEmpty.style.display='none';
+      emojis.forEach((src
